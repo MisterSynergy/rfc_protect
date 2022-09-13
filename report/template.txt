@@ -1,0 +1,67 @@
+This report summarizes the latest bot run of [[User:MsynABot]] (page protection management of “[[Wikidata:Protection policy#Highly used items|highly used items]]”).
+
+== Script configuration ==
+;Item usage retrieved from:
+:'''<span id="msynabot-config-wdcmurl">{wdcmurl}</span>'''
+:The report is being updated once per week. Usage numbers do neither include Wikidata-internal main namespace usage, nor usage in structured data at Wikimedia Commons (SDC).
+;Blacklist retrieved from:
+:'''<span id="msynabot-config-blacklist">{blacklisturl}</span>'''
+:The blacklist is an onwiki page that contains items which should not under any circumstances be protected by the bot. This should only be used for ''technical'' reasons, not for editorial reasons. Thus, there are items such as the sandbox items, [[Wikidata:Tours|Wikidata Tour]] items, and [[Help:Badges|Badge]] items listed on this blacklist. The blacklist can be edited by all [[Wikidata:Interface administrators|interface administrators]].
+;Min entity usage limit for protection:
+:'''<span id="msynabot-config-entityusagelimit">{entityusagelimit}</span>'''
+:This is the lower limit of Wikimedia pages that use an item in order to be deemed a “highly used item” as per the [[Wikidata:Protection policy#Highly used items|protection policy]]. The bot aims to protect item pages that are being used by more Wikimedia pages than this number.
+;Cooldown entity usage limit for unprotection:
+:'''<span id="msynabot-config-cooldownlimit">{cooldownlimit}</span>'''
+:In order to avoid frequent protection level changes, formerly “highly used items” are unprotected when the usage number falls below this threshold. This is not required by the page protection policy, and items with usage numbers between the cooldown limit and the min entity usage limit of {entityusagelimit} can be immediately unprotected by any administrator. The bot will only re-protect the item when the entity usage number exceeds the minimum value of {entityusagelimit} required by the page protection policy again.
+;New protection limit:
+:'''<span id="msynabot-config-addlimit">{addlimit}</span>'''
+:The bot only adds page protections if the number of new items meeting the “highly used” criterium since the last bot run does not exceed this value. This should avoid excessive amounts of new page protections without a human review. The number is set to be roughly three times larger than the average weekly increase in the number of “highly used items”.
+;Protection removal limit:
+:'''<span id="msynabot-config-liftlimit">{liftlimit}</span>'''
+:The bot only removes page protections if the number of items that do no longer meet the “highly used” criterium since the last bot run does not exceed this value. This should avoid excessive amounts of page protection removals without human review. The number is set to be roughly three times larger than the average weekly amount of items that are no longer “highly used”.
+;Hard protection modification limit per action:
+:'''<span id="msynabot-config-hardlimit">{hardlimit}</span>'''
+:Maximum number of protection additions and protection removals per run. Useful for testing of smaller batches.
+;Minimum subscribed projects for protection:
+:'''<span id="msynabot-config-minsubscribedprojects">{minsubscribedprojects}</span>'''
+:The bot only adds page protection to an item if at least this number of projects makes use of it. This should avoid that items are being protected because of excessive usage in fewer projects than this number. This setting is not part of the page protection policy, and may be removed (i.e. set to 0) at any time in the future.
+
+== Results ==
+;Script run time:
+:'''<span id="msynabot-config-timestmp">{timestmp} (UTC)</span>'''
+:By default, this script is automatically being executed once per week. It runs on Toolforge within the <code>msynabot</code> tool account.
+;Number of entities (items) in the WDCM toplist:
+:'''<span id="msynabot-result-wdcmcnt">{wdcmcnt}</span>'''
+;Number of entities (items) in the WDCM toplist with more than {entityusagelimit} entity uses:
+:'''<span id="msynabot-result-wdcmusagelimit">{wdcmusagelimit}</span>'''
+:This is the number of items which qualify for indefinite semi-protection under the “highly used item” scheme.
+:The ratio of items qualifying for page protection is <span id="msynabot-result-wdcmpercent">{wdcmpercent:.04f}</span>% (total number of items: <span id="msynabot-result-totalitems">{itemcnt}</span>).
+;Number of blacklisted items:
+:'''<span id="msynabot-result-blacklistedcnt">{blacklistedcnt}</span>'''
+:This was retrieved from [{blacklisturl}].
+;Number of indefinitely semiprotected items (before adding new protections):
+:'''<span id="msynabot-result-indefsemi">{indefsemi}</span>'''
+;Number of indefinitely semiprotected items under the “highly used item” scheme (before adding new protections):
+:'''<span id="msynabot-result-indefsemihighlyused">{indefsemihighlyused}</span>'''
+;Number of indefinitely semiprotected items for other reasons (before adding new protections):
+:'''<span id="msynabot-result-indefsemiother">{indefsemiother}</span>'''
+;Number of indefinitely semiprotected items for other reasons that would also qualifiy as “highly used items” (before adding new protections):
+:'''<span id="msynabot-result-indefsemiotherbutalsohighlyused">{indefsemiotherbutalsohighlyused}</span>'''
+;Number of page protections to add:
+:'''<span id="msynabot-result-protectionstoadd">{protectionstoadd}</span>'''
+:The actual number of added page protections may be lower, since the bot performs several consistency checks in order not to protect pages that should not be protected for some reason.
+;Number of page protections to remove:
+:'''<span id="msynabot-result-protectionstolift">{protectionstolift}</span>'''
+:The actual number of removed page protections may be lower, since the bot performs several consistency checks in order not to unprotect pages that should continue to be protected for some reason. This value does not include items in the “cooldown period” (usage numbers between {cooldownlimit} and {entityusagelimit}).
+;Number of pages in cooldown period (usage numbers between {cooldownlimit} and {entityusagelimit}):
+:'''<span id="msynabot-result-cooldowncnt">{cooldowncnt}</span>'''
+:List of items in cooldown: {cooldownlist}.
+:These page protections may be removed at any time. The bot will only re-protect items with usage numbers exceeding {entityusagelimit} again.
+;Number of page protections added in this bot run:
+:'''<span id="msynabot-result-addedcnt">{addedcnt}</span>'''
+;Number of page protections removed in this bot run:
+:'''<span id="msynabot-result-liftedcnt">{liftedcnt}</span>'''
+;Processing of protections to add:
+:{additionstats}
+;Processing of protections to remove:
+:{removalstats}
