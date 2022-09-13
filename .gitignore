@@ -1,0 +1,5 @@
+venv/
+dataframe/*.tsv
+dataframe/*.txt
+log/*.log
+report/report.txt

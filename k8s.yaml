@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: msynabot.rfc-protect
+  labels:
+    name: msynabot.rfc-protect
+    # The toolforge=tool label will cause $HOME and other paths to be mounted from Toolforge
+    toolforge: tool
+spec:
+  schedule: "0 22 * * 5"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            toolforge: tool
+        spec:
+          containers:
+          - name: rfc-protect
+            image: docker-registry.tools.wmflabs.org/toolforge-python39-sssd-base:latest
+            command: [ "/data/project/msynabot/pywikibot_tasks/rfc_protect/venv/bin/python3" ]
+            args: [ "/data/project/shared/pywikibot/stable/pwb.py", "/data/project/msynabot/pywikibot_tasks/rfc_protect/main.py" ]
+            workingDir: /data/project/msynabot/pywikibot_tasks/rfc_protect
+            env:
+            - name: HOME
+              value: /data/project/msynabot
+          restartPolicy: OnFailure
