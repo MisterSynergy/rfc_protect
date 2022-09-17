@@ -340,14 +340,14 @@ def protection_missing(top:pd.DataFrame, protected:pd.DataFrame) -> pd.DataFrame
 
 
 def protection_to_lift(top:pd.DataFrame, protected:pd.DataFrame, early:pd.DataFrame) -> pd.DataFrame:
-    item_protection_to_lift = protected[(~protected['qid'].isin(top.loc[top['entityUsageCount']>=Config.COOLDOWNUSAGELIMIT, 'qid'])) & (protected['qid'].isin(early['qid']))].dropna().merge(top, on='qid', how='left').sort_values(by='entityUsageCount', ascending=False)
+    item_protection_to_lift = protected[~protected['qid'].isin(top.loc[top['entityUsageCount']>=Config.COOLDOWNUSAGELIMIT, 'qid'])].dropna().merge(top, on='qid', how='left').sort_values(by='entityUsageCount', ascending=False)
     item_protection_to_lift.to_csv(Config.LOG_PROTECTIONSTOLIFT, sep='\t')
 
     return item_protection_to_lift
 
 
 def protection_in_cooldown(top:pd.DataFrame, protected:pd.DataFrame, early:pd.DataFrame) -> pd.DataFrame:
-    item_protection_in_cooldown = protected[(protected['qid'].isin(top.loc[top['entityUsageCount']<Config.ENTITYUSAGELIMIT, 'qid'])) & (protected['qid'].isin(top.loc[top['entityUsageCount']>=Config.COOLDOWNUSAGELIMIT, 'qid'])) & (protected['qid'].isin(early['qid']))].dropna().merge(top, on='qid', how='left').sort_values(by='entityUsageCount', ascending=False)
+    item_protection_in_cooldown = protected[(protected['qid'].isin(top.loc[top['entityUsageCount']<Config.ENTITYUSAGELIMIT, 'qid'])) & (protected['qid'].isin(top.loc[top['entityUsageCount']>=Config.COOLDOWNUSAGELIMIT, 'qid']))].dropna().merge(top, on='qid', how='left').sort_values(by='entityUsageCount', ascending=False)
     item_protection_in_cooldown.to_csv(Config.LOG_PROTECTIONSINCOOLDOWN, sep='\t')
 
     return item_protection_in_cooldown
