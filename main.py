@@ -339,14 +339,14 @@ def protection_missing(top:pd.DataFrame, protected:pd.DataFrame) -> pd.DataFrame
     return item_protection_to_add
 
 
-def protection_to_lift(top:pd.DataFrame, protected:pd.DataFrame, early:pd.DataFrame) -> pd.DataFrame:
+def protection_to_lift(top:pd.DataFrame, protected:pd.DataFrame) -> pd.DataFrame:
     item_protection_to_lift = protected[~protected['qid'].isin(top.loc[top['entityUsageCount']>=Config.COOLDOWNUSAGELIMIT, 'qid'])].dropna().merge(top, on='qid', how='left').sort_values(by='entityUsageCount', ascending=False)
     item_protection_to_lift.to_csv(Config.LOG_PROTECTIONSTOLIFT, sep='\t')
 
     return item_protection_to_lift
 
 
-def protection_in_cooldown(top:pd.DataFrame, protected:pd.DataFrame, early:pd.DataFrame) -> pd.DataFrame:
+def protection_in_cooldown(top:pd.DataFrame, protected:pd.DataFrame) -> pd.DataFrame:
     item_protection_in_cooldown = protected[(protected['qid'].isin(top.loc[top['entityUsageCount']<Config.ENTITYUSAGELIMIT, 'qid'])) & (protected['qid'].isin(top.loc[top['entityUsageCount']>=Config.COOLDOWNUSAGELIMIT, 'qid']))].dropna().merge(top, on='qid', how='left').sort_values(by='entityUsageCount', ascending=False)
     item_protection_in_cooldown.to_csv(Config.LOG_PROTECTIONSINCOOLDOWN, sep='\t')
 
@@ -502,8 +502,8 @@ def main() -> None:
     indef_protected_not_highly_used_items = protected_not_highly_used_items(indef_semiprotected_items, early_item_protections)
 
     item_protection_to_add = protection_missing(wdcm_toplist, indef_semiprotected_items)
-    item_protection_to_lift = protection_to_lift(wdcm_toplist, indef_protected_highly_used_items, early_item_protections)
-    item_protection_in_cooldown = protection_in_cooldown(wdcm_toplist, indef_protected_highly_used_items, early_item_protections)
+    item_protection_to_lift = protection_to_lift(wdcm_toplist, indef_protected_highly_used_items)
+    item_protection_in_cooldown = protection_in_cooldown(wdcm_toplist, indef_protected_highly_used_items)
 
     highly_used_items_already_protected_for_other_reasons = protection_already_set(wdcm_toplist, indef_protected_not_highly_used_items)
 
