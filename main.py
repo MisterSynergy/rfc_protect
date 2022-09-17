@@ -65,7 +65,7 @@ class Config:
     ENTITYUSAGELIMIT:int = 500 # per RfC
     COOLDOWNUSAGELIMIT:int = 300 # not in RfC, but as a measure to prevent frequent protection changes of items near ENTITYUSAGELIMIT
     ADDLIMIT:Union[int, None] = 500 # int or None; do not add any protections when more than this number needs to be added
-    LIFTLIMIT:Union[int, None] = 10 # int or None; do not lift any protections when more than this number needs to be lifted
+    LIFTLIMIT:Union[int, None] = 50 # int or None; do not lift any protections when more than this number needs to be lifted
     MINSUBSCRIBEDPROJECTS:Union[int, None] = None # int or None; minimum number of subscribed projects; usually includes wikidatawiki
     SIMULATE:bool = False # do not make any protection changes when True; any other value is equivalent to False
     HARDLIMIT:Union[int, None] = None # int or None; max number of cases processed for protection removals and additions
