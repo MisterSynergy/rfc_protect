@@ -1,7 +1,7 @@
 """
 Author:   https://www.wikidata.org/wiki/User:MisterSynergy
 License:  MIT license
-Version:  2022-09-13
+Version:  2022-09-18
 Task:     manage item page protections of "highly used items" in Wikidata
 See also: https://www.wikidata.org/wiki/User:MsynABot
 """
@@ -442,9 +442,9 @@ def remove_protection(case:Case, early_protection:pd.DataFrame) -> str:
     if not q_item.exists():
         Counter.remove_protection('itemnotexists')
         raise RuntimeWarning(f'Item {case.qid} does not exist')
-    if q_item.isRedirectPage():
-        Counter.remove_protection('itemisredirect')
-        raise RuntimeWarning(f'Item {case.qid} is a redirect')
+#   if q_item.isRedirectPage():
+#       Counter.remove_protection('itemisredirect')
+#       raise RuntimeWarning(f'Item {case.qid} is a redirect')
     current_protection = q_item.protection()
     if current_protection != Config.SEMIPROTECTED:
         Counter.remove_protection('itemisnotsemiprotected')
