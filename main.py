@@ -1,7 +1,7 @@
 """
 Author:   https://www.wikidata.org/wiki/User:MisterSynergy
 License:  MIT license
-Version:  2022-09-18
+Version:  2023-09-14
 Task:     manage item page protections of "highly used items" in Wikidata
 See also: https://www.wikidata.org/wiki/User:MsynABot
 """
@@ -13,11 +13,11 @@ from io import TextIOWrapper
 from json import loads
 from os.path import expanduser
 from time import strftime, gmtime, sleep
-from typing import TypedDict, Union
+from typing import Any, TypedDict, Union
 
+import mariadb
 import pandas as pd
 import pywikibot as pwb
-from mysql.connector import MySQLConnection
 from requests import get
 
 
@@ -190,12 +190,12 @@ class Counter:
 #### Manage database access to the Wikidata replica database on Toolforge
 class ReplicaCursor:
     def __init__(self):
-        self.replica = MySQLConnection(
+        self.replica = mariadb.connect(
             host=Config.REPLICA_HOST,
             database=Config.REPLICA_DATABASE,
-            option_files=f'{expanduser("~")}/replica.my.cnf'
+            default_file=f'{expanduser("~")}/replica.my.cnf'
         )
-        self.cursor = self.replica.cursor()
+        self.cursor = self.replica.cursor(dictionary=True)
 
     def __enter__(self):
         return self.cursor
@@ -205,7 +205,7 @@ class ReplicaCursor:
         self.replica.close()
 
 
-def access_replica_database(query:str) -> list[tuple]:
+def access_replica_database(query:str) -> list[dict[str, Any]]:
     with ReplicaCursor() as cursor:
         cursor.execute(query)
         result = cursor.fetchall()
@@ -217,9 +217,9 @@ def access_replica_database(query:str) -> list[tuple]:
 # From database: indefinitely semiprotected items
 def get_indefinitely_semiprotected_items() -> pd.DataFrame:
     sql = """SELECT
-      log_title,
-      log_timestamp,
-      actor_name
+      CONVERT(log_title USING utf8) AS qid,
+      CONVERT(log_timestamp USING utf8) AS logTimestamp,
+      CONVERT(actor_name USING utf8) AS username
     FROM
       page_restrictions
         JOIN logging ON pr_page=log_page
@@ -235,13 +235,11 @@ def get_indefinitely_semiprotected_items() -> pd.DataFrame:
     query_result = access_replica_database(sql)
 
     indef_semiprotected_items = pd.DataFrame(
-        data={
-            'qid' : [ row[0].decode('utf8') for row in query_result ],
-            'logTimestamp' : [ int(row[1].decode('utf8')) for row in query_result ],
-            'username' : [ row[2].decode('utf8') for row in query_result ]
-        },
-        columns =[ 'qid', 'logTimestamp', 'username' ]
-    ).sort_values(by='logTimestamp', ascending=True).drop_duplicates(subset='qid', keep='last')
+        data=query_result
+    )
+    indef_semiprotected_items['logTimestamp'] = indef_semiprotected_items['logTimestamp'].astype(int)
+
+    indef_semiprotected_items = indef_semiprotected_items.sort_values(by='logTimestamp', ascending=True).drop_duplicates(subset='qid', keep='last')
     indef_semiprotected_items.to_csv(Config.LOG_INDEFSEMI, sep='\t')
 
     return indef_semiprotected_items
@@ -365,9 +363,9 @@ def is_whitelisted_early_protection(case:Case, early_protection:pd.DataFrame) ->
         return False
 
     sql = f"""SELECT
-      log_title,
+      CONVERT(log_title USING utf8) AS log_qid,
       log_id,
-      actor_name
+      CONVERT(actor_name USING utf8) AS log_actorname
     FROM
       logging
         JOIN actor_logging ON log_actor=actor_id
@@ -382,9 +380,9 @@ def is_whitelisted_early_protection(case:Case, early_protection:pd.DataFrame) ->
       1"""
     log_info = access_replica_database(sql)
 
-    log_qid = log_info[0][0].decode('utf8')
-    log_id = int(log_info[0][1])
-    log_actorname = log_info[0][2].decode('utf8')
+    log_qid = log_info[0].get('log_qid', '')
+    log_id = log_info[0].get('log_id', 0)
+    log_actorname = log_info[0].get('log_actorname', '')
 
     return log_qid==early_protection.iloc[0].at['qid'] and log_id==early_protection.iloc[0].at['logId'] and log_actorname==early_protection.iloc[0].at['admin']
 
