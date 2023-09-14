@@ -17,7 +17,7 @@ spec:
         spec:
           containers:
           - name: rfc-protect
-            image: docker-registry.tools.wmflabs.org/toolforge-python39-sssd-base:latest
+            image: docker-registry.tools.wmflabs.org/toolforge-python311-sssd-base:latest
             env:
             - name: HOME
               value: /data/project/msynabot
