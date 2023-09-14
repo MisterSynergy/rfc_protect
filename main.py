@@ -74,7 +74,7 @@ class Config:
     ## set up pywikibot ##
     WIKIDATA_SITE:pwb.Site = pwb.Site('wikidata', 'wikidata')
     WIKIDATA_SITE.login()
-    WIKIDATA_REPO:pwb.DataSite = WIKIDATA_SITE.data_repository()
+    WIKIDATA_REPO:pwb.site._datasite.DataSite = WIKIDATA_SITE.data_repository()
 
     ## technical variables ##
     UNPROTECTED:dict[str, tuple[str, str]] = {}
