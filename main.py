@@ -1,15 +1,14 @@
 """
 Author:   https://www.wikidata.org/wiki/User:MisterSynergy
 License:  MIT license
-Version:  2023-09-14
+Version:  2023-09-19
 Task:     manage item page protections of "highly used items" in Wikidata
 See also: https://www.wikidata.org/wiki/User:MsynABot
 """
 
-
-import sys
+import logging
+import logging.config
 from collections import namedtuple
-from io import TextIOWrapper
 from json import loads
 from os.path import expanduser
 from time import strftime, gmtime, sleep
@@ -21,10 +20,15 @@ import pywikibot as pwb
 from requests import get
 
 
+TS = gmtime()
+logging.config.fileConfig('logging.conf', defaults={ 'logfilename' : f'log/rfc-protect_{strftime("%Y%m%d_%H%M%S", TS)}.log' })
+LOG = logging.getLogger()
+
+
 #### Simple configuration class
 class Config:
     ## Script run time
-    SCRIPTRUNTIME = gmtime()
+    SCRIPTRUNTIME = TS
 
     ## Database access (user credentials come from elsewhere) ##
     REPLICA_HOST:str = 'wikidatawiki.analytics.db.svc.wikimedia.cloud'
@@ -112,28 +116,6 @@ InputVars = TypedDict('InputVars', {
     'additionstats' : str,
     'removalstats' : str
 })
-
-
-#### Enable logging into file
-class Logger(TextIOWrapper):
-    def __init__(self, write_to_terminal:bool=False, write_to_log:bool=True) -> None:
-        self.write_to_terminal = write_to_terminal
-        self.write_to_log = write_to_log
-
-        self.terminal = sys.stdout
-        if self.write_to_log is True:
-            self.log = open(Config.REPORT_LOG_PATTERN.format(timestmp=strftime('%Y%m%d_%H%M%S', Config.SCRIPTRUNTIME)), 'a')
-
-    def write(self, message:str) -> int:
-        if self.write_to_terminal is True:
-            self.terminal.write(message)
-        if self.write_to_log is True:
-            self.log.write(message)
-        return len(message)
-
-    def flush(self):
-        #this flush method is needed for python 3 compatibility.
-        pass
 
 
 #### Counting cases
@@ -512,16 +494,16 @@ def main() -> None:
             try:
                 msg = remove_protection(case, early_protection)
             except RuntimeWarning as exception:
-                print(exception)
+                LOG.warning(exception)
             except RuntimeError as exception:
-                print(exception)
+                LOG.error(exception)
             else:
-                print(msg)
+                LOG.info(msg)
 
             if Config.HARDLIMIT is not None and processed >= Config.HARDLIMIT:
                 break
     else:
-        print(f'Do not lift any protections, as the list has {item_protection_to_lift.shape[0]} entries (limit: {Config.LIFTLIMIT})')
+        LOG.warning(f'Do not lift any protections, as the list has {item_protection_to_lift.shape[0]} entries (limit: {Config.LIFTLIMIT})')
 
     # add protections
     if Config.ADDLIMIT is None or item_protection_to_add.shape[0] <= Config.ADDLIMIT:
@@ -529,39 +511,39 @@ def main() -> None:
             try:
                 msg = add_protection(case, blacklist)
             except RuntimeWarning as exception:
-                print(exception)
+                LOG.warning(exception)
             except RuntimeError as exception:
-                print(exception)
+                LOG.error(exception)
             else:
-                print(msg)
+                LOG.info(msg)
 
             if Config.HARDLIMIT is not None and processed >= Config.HARDLIMIT:
                 break
     else:
-        print(f'Do not add any protections, as the list has {item_protection_to_add.shape[0]} entries (limit: {Config.ADDLIMIT})')
+        LOG.warning(f'Do not add any protections, as the list has {item_protection_to_add.shape[0]} entries (limit: {Config.ADDLIMIT})')
 
     # reporting to terminal/log file
-    print(f'Number of early item protections: {early_item_protections.shape[0]}')
-    print(f'Number of elements in WDCM toplist: {wdcm_toplist.shape[0]}')
-    print('Number of elements in WDCM toplist (cnt>={limit}): {cnt} ({perc:.4f}% of {total} items)'.format(
+    LOG.info(f'Number of early item protections: {early_item_protections.shape[0]}')
+    LOG.info(f'Number of elements in WDCM toplist: {wdcm_toplist.shape[0]}')
+    LOG.info('Number of elements in WDCM toplist (cnt>={limit}): {cnt} ({perc:.4f}% of {total} items)'.format(
         limit=Config.ENTITYUSAGELIMIT,
         cnt=wdcm_toplist.loc[wdcm_toplist['entityUsageCount']>=Config.ENTITYUSAGELIMIT].shape[0],
         perc=wdcm_toplist.loc[wdcm_toplist['entityUsageCount']>=Config.ENTITYUSAGELIMIT].shape[0] / total_number_of_items * 100,
         total=total_number_of_items
     ))
-    print(f'Number of blacklisted items: {len(blacklist)}')
+    LOG.info(f'Number of blacklisted items: {len(blacklist)}')
 
-    print(f'Number of indef semiprotected items: {indef_semiprotected_items.shape[0]}')
-    print(f'Number of indef semiprotected items (highly used): {indef_protected_highly_used_items.shape[0]}')
-    print(f'Number of indef semiprotected items (other): {indef_protected_not_highly_used_items.shape[0]}')
-    print(f'Number of indef semiprotected items (other, but also highly used): {highly_used_items_already_protected_for_other_reasons.shape[0]}')
+    LOG.info(f'Number of indef semiprotected items: {indef_semiprotected_items.shape[0]}')
+    LOG.info(f'Number of indef semiprotected items (highly used): {indef_protected_highly_used_items.shape[0]}')
+    LOG.info(f'Number of indef semiprotected items (other): {indef_protected_not_highly_used_items.shape[0]}')
+    LOG.info(f'Number of indef semiprotected items (other, but also highly used): {highly_used_items_already_protected_for_other_reasons.shape[0]}')
 
-    print(f'Number of protections to add: {item_protection_to_add.shape[0]}')
-    print(f'Number of protections to lift: {item_protection_to_lift.shape[0]}')
-    print(f'Number of protections not to lift (cooldown): {item_protection_in_cooldown.shape[0]}')
+    LOG.info(f'Number of protections to add: {item_protection_to_add.shape[0]}')
+    LOG.info(f'Number of protections to lift: {item_protection_to_lift.shape[0]}')
+    LOG.info(f'Number of protections not to lift (cooldown): {item_protection_in_cooldown.shape[0]}')
 
-    print(f'Number of protections added in this run: {Counter.added_protection["successful"]["cnt"]}')
-    print(f'Number of protections lifted in this run: {Counter.removed_protection["successful"]["cnt"]}')
+    LOG.info(f'Number of protections added in this run: {Counter.added_protection["successful"]["cnt"]}')
+    LOG.info(f'Number of protections lifted in this run: {Counter.removed_protection["successful"]["cnt"]}')
 
     # reporting to an onwiki page
     make_report({
@@ -595,8 +577,4 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    sys.stdout = Logger(
-        write_to_terminal=Config.WRITETOTERMINAL,
-        write_to_log=Config.WRITETOLOG
-    )
     main()
