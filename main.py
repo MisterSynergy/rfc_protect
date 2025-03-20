@@ -1,7 +1,7 @@
 """
 Author:   https://www.wikidata.org/wiki/User:MisterSynergy
 License:  MIT license
-Version:  2023-09-19
+Version:  2025-03-20
 Task:     manage item page protections of "highly used items" in Wikidata
 See also: https://www.wikidata.org/wiki/User:MsynABot
 """
