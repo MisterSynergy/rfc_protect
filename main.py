@@ -11,6 +11,7 @@ import logging.config
 from collections import namedtuple
 from json import loads
 from os.path import expanduser
+from shutil import copyfile
 from time import strftime, gmtime, sleep
 from typing import Any, TypedDict, Union
 
@@ -39,13 +40,15 @@ class Config:
     UNPROTECT_REASON:str = 'Item is no longer highly used as per [[:d:Wikidata:Protection policy#Highly used items|Wikidata:Protection policy#Highly used items]]'
 
     ## External resources ##
-    WDCM_TOPLIST_URL:str = 'https://analytics.wikimedia.org/published/datasets/wmde-analytics-engineering/wdcm/etl/wdcm_topItems.csv'
+    TOPLIST_URL:str = 'https://tools-static.wmflabs.org/kvasir1/entityusage_topitems.tsv.gz'
     BLACKLIST_URL:str = 'https://www.wikidata.org/w/index.php?title=User:MsynABot/rfc-protect-blacklist.json&action=raw&ctype=application/json'
     WD_API_ENDPOINT:str = 'https://www.wikidata.org/w/api.php'
 
+    KVASIR_TOPLIST_FNAME:str = '/data/project/kvasir1/entityusage/entityusage_topitems.tsv.gz'
+
     ## Files, log files ##
     FILE_EARLYPROTECTIONS:str = './dataframe/earlyItemProtections.txt'
-    FILE_TOPLIST:str = './dataframe/wdcmToplist.txt'
+    FILE_TOPLIST_KVASIR:str = './dataframe/kvasirToplist.tsv.gz'
     LOG_INDEFSEMI:str = './dataframe/indefSemiprotectedItems.tsv'
     LOG_PROTECTIONSTOADD:str = './dataframe/protectionToAdd.tsv'
     LOG_PROTECTIONSTOLIFT:str = './dataframe/protectionToLift.tsv'
@@ -90,7 +93,7 @@ Case = namedtuple('Case', ['qid', 'entityUsageCount', 'username'])
 CounterDict = TypedDict('CounterDict', {'msg': str, 'cnt': int})
 InputVars = TypedDict('InputVars', {
     'timestmp' : str,
-    'wdcmurl' : str,
+    'highly_used_items_url' : str,
     'blacklisturl' : str,
     'entityusagelimit' : int,
     'cooldownlimit' : int,
@@ -98,9 +101,9 @@ InputVars = TypedDict('InputVars', {
     'liftlimit' : Union[int, None],
     'hardlimit' : Union[int, None],
     'minsubscribedprojects' : Union[int, None],
-    'wdcmcnt' : int,
-    'wdcmusagelimit' : int,
-    'wdcmpercent' : float,
+    'highly_used_items_cnt' : int,
+    'highly_used_items_usagelimit' : int,
+    'highly_used_items_percent' : float,
     'itemcnt' : int,
     'blacklistedcnt' : int,
     'indefsemi' : int,
@@ -239,20 +242,19 @@ def get_early_item_protections() -> pd.DataFrame:
     return early_item_protections
 
 
-# From WDCM: list of highly used items (500+ uses)
-def get_list_of_highly_used_items_from_wdcm() -> pd.DataFrame:
-    # pandas does not like https resources; we thus cache the file locally
-    with open(Config.FILE_TOPLIST, mode='w', encoding='utf8') as file_handle:
-        file_handle.write(get(Config.WDCM_TOPLIST_URL).text)
+def get_list_of_highly_used_items_from_kvasir1() -> pd.DataFrame:
+    copyfile(Config.KVASIR_TOPLIST_FNAME, Config.FILE_TOPLIST_KVASIR)
 
-    wdcm_toplist = pd.read_csv(
-        Config.FILE_TOPLIST,
+    df = pd.read_csv(
+        Config.FILE_TOPLIST_KVASIR,
+        compression='gzip',
+        sep='\t',
+        header=0,
         names=[ 'qid', 'entityUsageCount' ],
         dtype={ 'qid' : 'str', 'entityUsageCount' : 'int' },
-        header=0
     )
 
-    return wdcm_toplist
+    return df
 
 
 # From Wikidata: list of items that should not be protected (sandbox, etc.)
@@ -473,7 +475,7 @@ def main() -> None:
     # gather input data
     indef_semiprotected_items = get_indefinitely_semiprotected_items() # all currently indefinitely semi-protected items
     early_item_protections = get_early_item_protections() # all items protected under the "highly used" scheme, but not by User:MsynABot
-    wdcm_toplist = get_list_of_highly_used_items_from_wdcm() # list of highly used items, compiled weekly by WMDE
+    highly_used_items_toplist = get_list_of_highly_used_items_from_kvasir1() # list of highly used items, updated weekly
     blacklist = get_blacklisted_items() # onwiki list of items that should not be protected (Tour items, sandbox, etc)
     total_number_of_items = get_number_of_items() # total number of ns0 non-redirects
 
@@ -481,11 +483,11 @@ def main() -> None:
     indef_protected_highly_used_items = protected_highly_used_items(indef_semiprotected_items, early_item_protections)
     indef_protected_not_highly_used_items = protected_not_highly_used_items(indef_semiprotected_items, early_item_protections)
 
-    item_protection_to_add = protection_missing(wdcm_toplist, indef_semiprotected_items)
-    item_protection_to_lift = protection_to_lift(wdcm_toplist, indef_protected_highly_used_items)
-    item_protection_in_cooldown = protection_in_cooldown(wdcm_toplist, indef_protected_highly_used_items)
+    item_protection_to_add = protection_missing(highly_used_items_toplist, indef_semiprotected_items)
+    item_protection_to_lift = protection_to_lift(highly_used_items_toplist, indef_protected_highly_used_items)
+    item_protection_in_cooldown = protection_in_cooldown(highly_used_items_toplist, indef_protected_highly_used_items)
 
-    highly_used_items_already_protected_for_other_reasons = protection_already_set(wdcm_toplist, indef_protected_not_highly_used_items)
+    highly_used_items_already_protected_for_other_reasons = protection_already_set(highly_used_items_toplist, indef_protected_not_highly_used_items)
 
     # lift protections
     if Config.LIFTLIMIT is None or item_protection_to_lift.shape[0] <= Config.LIFTLIMIT:
@@ -524,11 +526,11 @@ def main() -> None:
 
     # reporting to terminal/log file
     LOG.info(f'Number of early item protections: {early_item_protections.shape[0]}')
-    LOG.info(f'Number of elements in WDCM toplist: {wdcm_toplist.shape[0]}')
-    LOG.info('Number of elements in WDCM toplist (cnt>={limit}): {cnt} ({perc:.4f}% of {total} items)'.format(
+    LOG.info(f'Number of elements in highly used item toplist: {highly_used_items_toplist.shape[0]}')
+    LOG.info('Number of elements in highly used item toplist (cnt>={limit}): {cnt} ({perc:.4f}% of {total} items)'.format(
         limit=Config.ENTITYUSAGELIMIT,
-        cnt=wdcm_toplist.loc[wdcm_toplist['entityUsageCount']>=Config.ENTITYUSAGELIMIT].shape[0],
-        perc=wdcm_toplist.loc[wdcm_toplist['entityUsageCount']>=Config.ENTITYUSAGELIMIT].shape[0] / total_number_of_items * 100,
+        cnt=highly_used_items_toplist.loc[highly_used_items_toplist['entityUsageCount']>=Config.ENTITYUSAGELIMIT].shape[0],
+        perc=highly_used_items_toplist.loc[highly_used_items_toplist['entityUsageCount']>=Config.ENTITYUSAGELIMIT].shape[0] / total_number_of_items * 100,
         total=total_number_of_items
     ))
     LOG.info(f'Number of blacklisted items: {len(blacklist)}')
@@ -548,7 +550,7 @@ def main() -> None:
     # reporting to an onwiki page
     make_report({
         'timestmp' : strftime('%Y-%m-%d, %H:%M:%S', Config.SCRIPTRUNTIME),
-        'wdcmurl' : Config.WDCM_TOPLIST_URL,
+        'highly_used_items_url' : Config.TOPLIST_URL,
         'blacklisturl' : Config.BLACKLIST_URL,
         'entityusagelimit' : Config.ENTITYUSAGELIMIT,
         'cooldownlimit' : Config.COOLDOWNUSAGELIMIT,
@@ -556,9 +558,9 @@ def main() -> None:
         'liftlimit' : Config.LIFTLIMIT,
         'hardlimit' : Config.HARDLIMIT,
         'minsubscribedprojects' : Config.MINSUBSCRIBEDPROJECTS,
-        'wdcmcnt' : wdcm_toplist.shape[0],
-        'wdcmusagelimit' : wdcm_toplist.loc[wdcm_toplist['entityUsageCount']>=Config.ENTITYUSAGELIMIT].shape[0],
-        'wdcmpercent' : wdcm_toplist.loc[wdcm_toplist['entityUsageCount']>=Config.ENTITYUSAGELIMIT].shape[0] / total_number_of_items * 100,
+        'highly_used_items_cnt' : highly_used_items_toplist.shape[0],
+        'highly_used_items_usagelimit' : highly_used_items_toplist.loc[highly_used_items_toplist['entityUsageCount']>=Config.ENTITYUSAGELIMIT].shape[0],
+        'highly_used_items_percent' : highly_used_items_toplist.loc[highly_used_items_toplist['entityUsageCount']>=Config.ENTITYUSAGELIMIT].shape[0] / total_number_of_items * 100,
         'itemcnt' : total_number_of_items,
         'blacklistedcnt' : len(blacklist),
         'indefsemi' : indef_semiprotected_items.shape[0],

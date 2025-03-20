@@ -2,7 +2,7 @@ This report summarizes the latest bot run of [[User:MsynABot]] (page protection 
 
 == Script configuration ==
 ;Item usage retrieved from:
-:'''<span id="msynabot-config-wdcmurl">{wdcmurl}</span>'''
+:'''<span id="msynabot-config-url">{highly_used_items_url}</span>'''
 :The report is being updated once per week. Usage numbers do neither include Wikidata-internal main namespace usage, nor usage in structured data at Wikimedia Commons (SDC).
 ;Blacklist retrieved from:
 :'''<span id="msynabot-config-blacklist">{blacklisturl}</span>'''
@@ -30,12 +30,12 @@ This report summarizes the latest bot run of [[User:MsynABot]] (page protection 
 ;Script run time:
 :'''<span id="msynabot-config-timestmp">{timestmp} (UTC)</span>'''
 :By default, this script is automatically being executed once per week. It runs on Toolforge within the <code>msynabot</code> tool account.
-;Number of entities (items) in the WDCM toplist:
-:'''<span id="msynabot-result-wdcmcnt">{wdcmcnt}</span>'''
-;Number of entities (items) in the WDCM toplist with more than {entityusagelimit} entity uses:
-:'''<span id="msynabot-result-wdcmusagelimit">{wdcmusagelimit}</span>'''
+;Number of entities (items) in the highly used item toplist:
+:'''<span id="msynabot-result-highly-used-items-cnt">{highly_used_items_cnt}</span>'''
+;Number of entities (items) in the highly used item toplist with more than {entityusagelimit} entity uses:
+:'''<span id="msynabot-result-highly-used-items-usagelimit">{highly_used_items_usagelimit}</span>'''
 :This is the number of items which qualify for indefinite semi-protection under the “highly used item” scheme.
-:The ratio of items qualifying for page protection is <span id="msynabot-result-wdcmpercent">{wdcmpercent:.04f}</span>% (total number of items: <span id="msynabot-result-totalitems">{itemcnt}</span>).
+:The ratio of items qualifying for page protection is <span id="msynabot-result-highly-used-items-percent">{highly_used_items_percent:.04f}</span>% (total number of items: <span id="msynabot-result-totalitems">{itemcnt}</span>).
 ;Number of blacklisted items:
 :'''<span id="msynabot-result-blacklistedcnt">{blacklistedcnt}</span>'''
 :This was retrieved from [{blacklisturl}].
